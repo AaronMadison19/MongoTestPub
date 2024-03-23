@@ -24,6 +24,7 @@ app.get('/', function(req, res) {
   var outstring = 'Default endpoint starting on date: ' + Date.now();
   outstring += '<p><a href=\"./login\">Login</a>';
   outstring += '<p><a href=\"./register\">Register</a>';
+  outstring += '<p><a href=\"/reportcookie\">See cookies</a>';                              //T4-REF1
   res.send(outstring);
 });
 
@@ -31,7 +32,7 @@ app.get('/register', function(req, res) {                                       
   var outstring = 'Login: ' + Date.now();
   //outstring += '<p><a href=\"';             //form to retrieve user input html style
   outstring += '<form action="./api/mongowrite/registerSubmit" method="GET"><p>Username: <input type="text" name="username"><p>Password: <input type="text" name="password"><p><input type="submit" name="Submit"></form>'
-
+  outstring += '<p><a href=\"/reportcookie\">See cookies</a>';                           //T4-REF2
   res.send(outstring);
 });
 
@@ -39,12 +40,8 @@ app.get('/login', function(req, res) {                                          
   var outstring = 'Login: ' + Date.now();
   //outstring += '<p><a href=\"';             //form to retrieve user input html style
   outstring += '<form action="./api/mongo/loginSubmit" method="GET"><p>Username: <input type="text" name="username"><p>Password: <input type="text" name="password"><p><input type="submit" name="Submit"></form>'
-
+  outstring += '<p><a href=\"/reportcookie\">See cookies</a>';                          //T4-REF3
   res.send(outstring);
-});
-
-app.get('/say/:name', function(req, res) {
-  res.send('Hello ' + req.params.name + '!');
 });
 
 
@@ -69,23 +66,26 @@ async function run() {
     console.log(query)
 
     const person = await people.findOne(query);
-    console.log(person);
+    //console.log(person);
 
     if (person === null) {
       console.log("User not found")
       var outstring = 'User not found. Try again.'                                                            //T3.1-REF1
       outstring += '<p><a href=\"/\">Login again</a>';
+      outstring += '<p><a href=\"/reportcookie\">See cookies</a>';                                            //T4-REF5
       res.send(outstring);
     } else {
       console.log(person);
       console.log('setcookie');
 
-      res.cookie('cook2', req.query.username + 'cookie', {maxAge : 60000});
+      res.cookie('cook' + req.query.username + 'forlogin', req.query.username + 'cookie', {maxAge : 30000});                                   //T3.2-REF1
 
-      mycookies = req.cookies;
-      res.send(JSON.stringify(mycookies) + " --Done reporting");
+      var outstring = "Successfully logged in!"                                                               //T3.2-REF2
+      outstring += '<p>Found this: ' + JSON.stringify(person)
+      outstring += '<p><a href=\"/reportcookie\">See cookies</a>';                                            //T4-REF6
 
-      res.send('Found this: ' + JSON.stringify(person));  //Use stringify to print a json
+      //res.send('Found this: ' + JSON.stringify(person));  //Use stringify to print a json
+      res.send(outstring)
     }
 
     //res.send('Found this: ' + JSON.stringify(person));  //Use stringify to print a json
@@ -123,7 +123,9 @@ app.get('/api/mongowrite/registerSubmit', function(req, res) {                  
   
       const doit = await where2put.insertOne(doc2insert);
       console.log(doit);
-      res.send('Got this: ' + JSON.stringify(doit));  //Use stringify to print a json
+      var outstring = 'Got this: ' + JSON.stringify(doit);
+      outstring += '<p><a href=\"/reportcookie\">See cookies</a>';                          //T4-REF7
+      res.send(outstring);  //Use stringify to print a json
   
     } finally {
       // Ensures that the client will close when you finish/error
@@ -131,4 +133,24 @@ app.get('/api/mongowrite/registerSubmit', function(req, res) {                  
     }
   }
   run().catch(console.dir);
+  });
+
+  app.get('/reportcookie', function (req, res) {
+    // Cookies that have not been signed
+    console.log('Cookies: ', req.cookies);
+  
+    // Cookies that have been signed
+    console.log('Signed Cookies: ', req.signedCookies);
+  
+    //Send the cookies report to the browser
+    mycookies=req.cookies;
+    res.send(JSON.stringify(mycookies) + " --Done reporting");
+  });
+
+  app.get('/clearcookie/:cookiename', function (req, res) {
+    res.clearCookie(req.params.cookiename); //Shortcut for setting expiration in the past
+    var outstring = "The cookie was cleared succesfully!"                                  //T3.2-REF2
+    outstring += '<p><a href=\"/reportcookie\">See cookies</a>';                           //T4-REF8
+    outstring += 'Cookie deleted' + req.params.cookiename;
+    res.send(outstring);
   });
