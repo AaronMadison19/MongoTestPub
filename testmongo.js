@@ -21,26 +21,28 @@ app.use(express.urlencoded({ extended: true }));
 // Default route:
 app.get('/', function(req, res) {
   const myquery = req.query;
-  var outstring = 'Default endpoint starting on date: ' + Date.now();
+  var outstring = 'Welcome! Login if you have an account, or register today!';
   outstring += '<p><a href=\"./login\">Login</a>';
   outstring += '<p><a href=\"./register\">Register</a>';
-  outstring += '<p><a href=\"/reportcookie\">See cookies</a>';                              //T4-REF1
+  outstring += '<p><a href=\"/reportcookie\">See cookies</a>';                                                //T4-REF1
   res.send(outstring);
 });
 
-app.get('/register', function(req, res) {                                                  //T1-REF1
+app.get('/register', function(req, res) {                                                                     //T1-REF1
   var outstring = 'Login: ' + Date.now();
   //outstring += '<p><a href=\"';             //form to retrieve user input html style
   outstring += '<form action="./api/mongowrite/registerSubmit" method="GET"><p>Username: <input type="text" name="username"><p>Password: <input type="text" name="password"><p><input type="submit" name="Submit"></form>'
-  outstring += '<p><a href=\"/reportcookie\">See cookies</a>';                           //T4-REF2
+  outstring += '<p><a href=\"/reportcookie\">See cookies</a>';                                                //T4-REF2
+  outstring += '<p><a href=\"/\">Return to homepage</a>';
   res.send(outstring);
 });
 
-app.get('/login', function(req, res) {                                                  //T1-REF1
+app.get('/login', function(req, res) {                                                                        //T1-REF1
   var outstring = 'Login: ' + Date.now();
   //outstring += '<p><a href=\"';             //form to retrieve user input html style
   outstring += '<form action="./api/mongo/loginSubmit" method="GET"><p>Username: <input type="text" name="username"><p>Password: <input type="text" name="password"><p><input type="submit" name="Submit"></form>'
-  outstring += '<p><a href=\"/reportcookie\">See cookies</a>';                          //T4-REF3
+  outstring += '<p><a href=\"/reportcookie\">See cookies</a>';                                                //T4-REF3
+  outstring += '<p><a href=\"/\">Return to homepage</a>';
   res.send(outstring);
 });
 
@@ -78,11 +80,17 @@ async function run() {
       console.log(person);
       console.log('setcookie');
 
-      res.cookie('cook' + req.query.username + 'forlogin', req.query.username + 'cookie', {maxAge : 30000});                                   //T3.2-REF1
+      var first = 'cook' + req.query.username + 'forlogin';
+      var last = req.query.username + 'cookie';
+
+      //res.cookie('cook' + req.query.username + 'forlogin', req.query.username + 'cookie', {maxAge : 60000});  //T3.2-REF1
+      res.cookie(first, last, {maxAge : 60000});
 
       var outstring = "Successfully logged in!"                                                               //T3.2-REF2
       outstring += '<p>Found this: ' + JSON.stringify(person)
+      outstring += '<p>Cookie generated:' + JSON.stringify(last);
       outstring += '<p><a href=\"/reportcookie\">See cookies</a>';                                            //T4-REF6
+      outstring += '<p><a href=\"/\">Return to homepage</a>';
 
       //res.send('Found this: ' + JSON.stringify(person));  //Use stringify to print a json
       res.send(outstring)
@@ -99,7 +107,7 @@ run().catch(console.dir);
 });
 
 
-app.get('/api/mongowrite/registerSubmit', function(req, res) {                              //T1-REF2
+app.get('/api/mongowrite/registerSubmit', function(req, res) {                                                //T1-REF2
   console.log("PARAMS: inpkey: " + req.params.inpkey + " inpval: " + req.params.inpval);
   
   const client = new MongoClient(uri);
@@ -116,7 +124,7 @@ app.get('/api/mongowrite/registerSubmit', function(req, res) {                  
   console.log("Username: " + req.query.username)
   console.log("Password: " + req.query.password)
   
-  async function run() {                                                                    //T2-REF1
+  async function run() {                                                                                      //T2-REF1
     try {
       const database = client.db('MyDBexample');
       const where2put = database.collection('MyAuthentication');
@@ -124,7 +132,9 @@ app.get('/api/mongowrite/registerSubmit', function(req, res) {                  
       const doit = await where2put.insertOne(doc2insert);
       console.log(doit);
       var outstring = 'Got this: ' + JSON.stringify(doit);
-      outstring += '<p><a href=\"/reportcookie\">See cookies</a>';                          //T4-REF7
+      outstring += '<p>User successfully registered!'
+      outstring += '<p><a href=\"/reportcookie\">See cookies</a>';     
+      outstring += '<p><a href=\"/\">Return to homepage</a>';                                       //T4-REF7
       res.send(outstring);  //Use stringify to print a json
   
     } finally {
@@ -144,13 +154,21 @@ app.get('/api/mongowrite/registerSubmit', function(req, res) {                  
   
     //Send the cookies report to the browser
     mycookies=req.cookies;
-    res.send(JSON.stringify(mycookies) + " --Done reporting");
+
+    var outstring = JSON.stringify(mycookies) + " --Done reporting";
+    outstring += '<p><a href=\"/clearcookie\">Clear cookies?</a>';
+    outstring += '<p><a href=\"/\">Return to homepage</a>';
+    res.send(outstring);
   });
 
-  app.get('/clearcookie/:cookiename', function (req, res) {
-    res.clearCookie(req.params.cookiename); //Shortcut for setting expiration in the past
-    var outstring = "The cookie was cleared succesfully!"                                  //T3.2-REF2
-    outstring += '<p><a href=\"/reportcookie\">See cookies</a>';                           //T4-REF8
-    outstring += 'Cookie deleted' + req.params.cookiename;
+  app.get('/clearcookie', function (req, res) {
+    for (const cookieName in req.cookies) {
+      res.clearCookie(cookieName)
+    }
+    //res.clearCookie(req.cookies); //Shortcut for setting expiration in the past
+    var outstring = "The cookies were cleared succesfully!"                                                  //T3.2-REF2
+    outstring += '<p><a href=\"/reportcookie\">See all cookies</a>';                                         //T4-REF8
+    outstring += '<p><a href=\"/\">Return to homepage</a>';                                                  //T5-REF1
+    //outstring += 'Cookie deleted' + req.params.cookiename;
     res.send(outstring);
   });
