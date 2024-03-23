@@ -5,7 +5,10 @@ const uri = "mongodb+srv://aaronmadison:aaronmdbpassword@aaronmdb.n8pvezz.mongod
 
 // --- This is the standard stuff to get it to work on the browser
 const express = require('express');
+const cookieParser = require('cookie-parser'); 
 const app = express();
+app.use(cookieParser());
+
 const port = 3000;
 app.listen(port);
 console.log('Server started at http://localhost:' + port);
@@ -19,7 +22,7 @@ app.use(express.urlencoded({ extended: true }));
 app.get('/', function(req, res) {
   const myquery = req.query;
   var outstring = 'Default endpoint starting on date: ' + Date.now();
-  outstring += '<p><a href=\"./task1\">Login</a>';
+  outstring += '<p><a href=\"./login\">Login</a>';
   outstring += '<p><a href=\"./register\">Register</a>';
   res.send(outstring);
 });
@@ -32,30 +35,60 @@ app.get('/register', function(req, res) {                                       
   res.send(outstring);
 });
 
+app.get('/login', function(req, res) {                                                  //T1-REF1
+  var outstring = 'Login: ' + Date.now();
+  //outstring += '<p><a href=\"';             //form to retrieve user input html style
+  outstring += '<form action="./api/mongo/loginSubmit" method="GET"><p>Username: <input type="text" name="username"><p>Password: <input type="text" name="password"><p><input type="submit" name="Submit"></form>'
+
+  res.send(outstring);
+});
+
 app.get('/say/:name', function(req, res) {
   res.send('Hello ' + req.params.name + '!');
 });
 
 
-// Route to access database:
-app.get('/api/mongo/:item', function(req, res) {
+// Route to access database for people:
+app.get('/api/mongo/loginSubmit', function(req, res) {
 const client = new MongoClient(uri);
-const searchKey = "{ partID: '" + req.params.item + "' }";
+const searchKey = "{ username: '" + req.query.username + "' }";
 console.log("Looking for: " + searchKey);
 
 async function run() {
   try {
     const database = client.db('MyDBexample');
-    const parts = database.collection('MyStuff');
+    const people = database.collection('MyAuthentication');
 
     // Hardwired Query for a part that has partID '12345'
     // const query = { partID: '12345' };
     // But we will use the parameter provided with the route
-    const query = { partID: req.params.item };
+    //const query = { req.query.username: req.query.password };
+    const query = { [req.query.username]: req.query.password };
+    console.log(req.query.username)
+    console.log(req.query.password)
+    console.log(query)
 
-    const part = await parts.findOne(query);
-    console.log(part);
-    res.send('Found this: ' + JSON.stringify(part));  //Use stringify to print a json
+    const person = await people.findOne(query);
+    console.log(person);
+
+    if (person === null) {
+      console.log("User not found")
+      var outstring = 'User not found. Try again.'                                                            //T3.1-REF1
+      outstring += '<p><a href=\"/\">Login again</a>';
+      res.send(outstring);
+    } else {
+      console.log(person);
+      console.log('setcookie');
+
+      res.cookie('cook2', req.query.username + 'cookie', {maxAge : 60000});
+
+      mycookies = req.cookies;
+      res.send(JSON.stringify(mycookies) + " --Done reporting");
+
+      res.send('Found this: ' + JSON.stringify(person));  //Use stringify to print a json
+    }
+
+    //res.send('Found this: ' + JSON.stringify(person));  //Use stringify to print a json
 
   } finally {
     // Ensures that the client will close when you finish/error
